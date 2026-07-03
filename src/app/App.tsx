@@ -1,46 +1,33 @@
 import { useEffect, useRef, useState } from "react";
-import { createGameRuntime } from "../game/bootstrap/createGameRuntime";
-import { HUD } from "../features/hud/HUD";
-import { MenuLayer } from "../features/menus/MenuLayer";
-import { useSaveStore } from "../game/ui-bridge/save-store";
-import type { GameRuntime } from "../game/core/runtime/GameRuntime";
+import { createNullpointRuntime, type NullpointRuntime } from "../bridge/createNullpointRuntime";
+import type { UiCommands } from "../bridge/commands";
+import { GameOverlay } from "../ui/GameOverlay";
 
-export const App = () => {
+export function App(): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [runtime, setRuntime] = useState<GameRuntime | null>(null);
-  const ready = useSaveStore((state) => state.ready);
+  const runtimeRef = useRef<NullpointRuntime | null>(null);
+  const [commands, setCommands] = useState<UiCommands | null>(null);
 
   useEffect(() => {
-    let active = true;
     const canvas = canvasRef.current;
-    if (!canvas) {
-      return;
+    if (!canvas || runtimeRef.current) {
+      return undefined;
     }
 
-    void createGameRuntime(canvas).then((createdRuntime) => {
-      if (!active) {
-        createdRuntime.dispose();
-        return;
-      }
-      setRuntime(createdRuntime);
-    });
+    const runtime = createNullpointRuntime(canvas);
+    runtimeRef.current = runtime;
+    setCommands(runtime.commands);
 
     return () => {
-      active = false;
-      setRuntime((current) => {
-        current?.dispose();
-        return null;
-      });
+      runtime.dispose();
+      runtimeRef.current = null;
     };
   }, []);
 
   return (
-    <div className="app-shell">
-      <canvas ref={canvasRef} className="game-canvas" />
-      <div className="vignette" aria-hidden />
-      <HUD />
-      <MenuLayer runtime={runtime} />
-      {!ready ? <div className="boot-loader">Initializing command grid...</div> : null}
-    </div>
+    <main className="appShell">
+      <canvas ref={canvasRef} className="gameCanvas" data-testid="game-canvas" />
+      <GameOverlay commands={commands} />
+    </main>
   );
-};
+}

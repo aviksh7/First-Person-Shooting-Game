@@ -1,0 +1,11 @@
+node_modules
+dist
+coverage
+output
+scripts
+playwright-report
+test-results
+*.tsbuildinfo
+*.d.ts
+*.js
+progress.md
