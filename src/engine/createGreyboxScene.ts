@@ -4,22 +4,31 @@ import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Scene } from "@babylonjs/core/scene";
 
-export function createGreyboxScene(engine: Engine, canvas: HTMLCanvasElement): Scene {
+export interface GreyboxScene {
+  readonly scene: Scene;
+  readonly camera: UniversalCamera;
+}
+
+const enableCollision = (mesh: AbstractMesh): void => {
+  mesh.checkCollisions = true;
+};
+
+export function createGreyboxScene(engine: Engine): GreyboxScene {
   const scene = new Scene(engine);
+  scene.collisionsEnabled = true;
   scene.clearColor = new Color4(0.035, 0.04, 0.045, 1);
   scene.fogMode = Scene.FOGMODE_EXP;
   scene.fogDensity = 0.018;
   scene.fogColor = new Color3(0.12, 0.13, 0.14);
 
-  const camera = new UniversalCamera("debug-camera", new Vector3(0, 2.2, -8), scene);
-  camera.setTarget(new Vector3(0, 1.6, 0));
-  camera.attachControl(canvas, true);
-  camera.speed = 0.35;
-  camera.angularSensibility = 4_500;
+  const camera = new UniversalCamera("player-camera", new Vector3(0, 1.65, -6), scene);
+  camera.minZ = 0.03;
+  scene.activeCamera = camera;
 
   const hemiLight = new HemisphericLight("hemi-light", new Vector3(0, 1, 0), scene);
   hemiLight.intensity = 0.62;
@@ -40,22 +49,27 @@ export function createGreyboxScene(engine: Engine, canvas: HTMLCanvasElement): S
 
   const floor = MeshBuilder.CreateGround("floor", { width: 18, height: 18 }, scene);
   floor.material = floorMaterial;
+  enableCollision(floor);
 
   const backWall = MeshBuilder.CreateBox("back-wall", { width: 18, height: 4, depth: 0.4 }, scene);
   backWall.position = new Vector3(0, 2, 9);
   backWall.material = wallMaterial;
+  enableCollision(backWall);
 
   const frontWall = MeshBuilder.CreateBox("front-wall", { width: 18, height: 4, depth: 0.4 }, scene);
   frontWall.position = new Vector3(0, 2, -9);
   frontWall.material = wallMaterial;
+  enableCollision(frontWall);
 
   const leftWall = MeshBuilder.CreateBox("left-wall", { width: 0.4, height: 4, depth: 18 }, scene);
   leftWall.position = new Vector3(-9, 2, 0);
   leftWall.material = wallMaterial;
+  enableCollision(leftWall);
 
   const rightWall = MeshBuilder.CreateBox("right-wall", { width: 0.4, height: 4, depth: 18 }, scene);
   rightWall.position = new Vector3(9, 2, 0);
   rightWall.material = wallMaterial;
+  enableCollision(rightWall);
 
   const boxPositions = [
     new Vector3(-4.5, 0.5, -1.5),
@@ -68,7 +82,8 @@ export function createGreyboxScene(engine: Engine, canvas: HTMLCanvasElement): S
     const box = MeshBuilder.CreateBox(`greybox-prop-${index + 1}`, { size: index === 1 ? 1.5 : 1 }, scene);
     box.position = position;
     box.material = propMaterial;
+    enableCollision(box);
   });
 
-  return scene;
+  return { scene, camera };
 }

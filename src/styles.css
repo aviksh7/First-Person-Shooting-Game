@@ -107,7 +107,7 @@ button {
   right: 14px;
   display: grid;
   gap: 4px;
-  min-width: 150px;
+  min-width: 210px;
   padding: 10px 12px;
   border: 1px solid rgba(143, 215, 196, 0.45);
   border-radius: 6px;

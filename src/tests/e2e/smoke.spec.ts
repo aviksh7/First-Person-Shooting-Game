@@ -27,6 +27,29 @@ test("NULLPOINT boots, renders, starts, and toggles perf overlay", async ({ page
     })
     .toBe("Playing");
 
+  const startingPosition = await page.evaluate(() => window.__NULLPOINT_PLAYER__?.position);
+
+  await page.keyboard.down("w");
+  await page.waitForTimeout(1_000);
+  await page.keyboard.up("w");
+
+  await expect
+    .poll(
+      async () =>
+        page.evaluate((start) => {
+          const position = window.__NULLPOINT_PLAYER__?.position;
+          if (!position || !start) {
+            return 0;
+          }
+
+          return Math.hypot(position.x - start.x, position.z - start.z);
+        }, startingPosition),
+      {
+        message: "holding W moves the player",
+      },
+    )
+    .toBeGreaterThan(0.5);
+
   await expect
     .poll(
       async () =>
@@ -53,6 +76,14 @@ test("NULLPOINT boots, renders, starts, and toggles perf overlay", async ({ page
   await expect(page.getByTestId("perf-overlay")).toBeVisible();
   await expect(page.getByTestId("perf-overlay")).toContainText("FPS");
   await expect(page.getByTestId("perf-overlay")).toContainText("Draw calls");
+  await expect(page.getByTestId("perf-overlay")).toContainText("State");
+
+  await page.keyboard.press("Escape");
+  await expect
+    .poll(async () => page.evaluate(() => window.__NULLPOINT_PHASE__), {
+      message: "Escape reaches Paused phase",
+    })
+    .toBe("Paused");
 
   expect(consoleErrors).toEqual([]);
 });

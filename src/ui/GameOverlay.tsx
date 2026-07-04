@@ -8,13 +8,14 @@ interface GameOverlayProps {
 export function GameOverlay({ commands }: GameOverlayProps): JSX.Element {
   const phase = useUiStore((state) => state.phase);
   const perfStats = useUiStore((state) => state.perfStats);
+  const playerDebug = useUiStore((state) => state.playerDebug);
   const isPerfOverlayVisible = useUiStore((state) => state.isPerfOverlayVisible);
 
   return (
     <div className="overlay" data-phase={phase}>
       {phase === "Menu" ? (
         <section className="titleScreen" data-testid="title-screen">
-          <p className="eyebrow">Sprint 0 Foundation</p>
+          <p className="eyebrow">Sprint 1A Controller</p>
           <h1>NULLPOINT</h1>
           <button
             className="primaryAction"
@@ -49,6 +50,18 @@ export function GameOverlay({ commands }: GameOverlayProps): JSX.Element {
         <aside className="perfOverlay" data-testid="perf-overlay">
           <span>FPS {perfStats.fps}</span>
           <span>Draw calls {perfStats.drawCalls}</span>
+          {playerDebug ? (
+            <>
+              <span>State {playerDebug.state}</span>
+              <span>Speed {playerDebug.horizontalSpeed.toFixed(2)} m/s</span>
+              <span>Grounded {playerDebug.grounded ? "yes" : "no"}</span>
+              <span>Dash {playerDebug.dashCooldownRemaining.toFixed(2)} s</span>
+              <span>
+                Pos {playerDebug.position.x.toFixed(1)}, {playerDebug.position.y.toFixed(1)},{" "}
+                {playerDebug.position.z.toFixed(1)}
+              </span>
+            </>
+          ) : null}
         </aside>
       ) : null}
     </div>

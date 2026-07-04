@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { createNullpointRuntime, type NullpointRuntime } from "../bridge/createNullpointRuntime";
-import type { UiCommands } from "../bridge/commands";
 import { GameOverlay } from "../ui/GameOverlay";
 
 export function App(): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const runtimeRef = useRef<NullpointRuntime | null>(null);
-  const [commands, setCommands] = useState<UiCommands | null>(null);
+  const [runtimeRevision, setRuntimeRevision] = useState(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -16,18 +15,23 @@ export function App(): JSX.Element {
 
     const runtime = createNullpointRuntime(canvas);
     runtimeRef.current = runtime;
-    setCommands(runtime.commands);
+    setRuntimeRevision((revision) => revision + 1);
 
     return () => {
       runtime.dispose();
-      runtimeRef.current = null;
+      if (runtimeRef.current === runtime) {
+        runtimeRef.current = null;
+      }
+      setRuntimeRevision((revision) => revision + 1);
     };
   }, []);
+
+  const commands = runtimeRef.current?.commands ?? null;
 
   return (
     <main className="appShell">
       <canvas ref={canvasRef} className="gameCanvas" data-testid="game-canvas" />
-      <GameOverlay commands={commands} />
+      <GameOverlay key={runtimeRevision} commands={commands} />
     </main>
   );
 }

@@ -30,6 +30,18 @@ Professional browser-first FPS vertical slice foundation. Sprint 0 is technical 
 - Scene code does not directly control React UI.
 - Game and bridge layers must not import from Babylon.
 - ESLint enforces the Babylon boundary with `no-restricted-imports`.
+- Sprint 1A player movement math and controller code live in `src/game/player` and stay pure of Babylon, DOM, and React.
+- Engine-side collision, pointer lock, camera sync, and mouse-look plumbing live in `src/engine`.
+- Movement gym, live tuning panel, and copy-config JSON are deferred to Sprint 1B.
+
+## Input Bindings
+
+- `W/A/S/D`: movement
+- `ShiftLeft`: sprint
+- `Space`: jump
+- `KeyE`: dash. `KeyE` is the Sprint 1A default because right mouse can collide with browser/context-menu behavior.
+- `Esc`: pause and clear held input
+- `F3`: perf and movement debug readout
 
 ## TypeScript Rules
 
@@ -43,6 +55,7 @@ Professional browser-first FPS vertical slice foundation. Sprint 0 is technical 
 - Simulation tick target is 60 Hz.
 - Render and simulation are decoupled with capped catch-up steps.
 - No shadows in Sprint 0.
+- Avoid per-frame/per-tick allocations in hot movement paths where reasonably avoidable.
 - Avoid new runtime libraries unless they are clearly justified.
 
 ## Commands
