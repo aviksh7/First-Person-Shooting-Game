@@ -38,6 +38,10 @@ export interface GroundReport {
   readonly groundNormal: PlayerPosition;
 }
 
+export interface CollisionContacts {
+  readonly upwardBlocked: boolean;
+}
+
 export interface PlayerStep {
   readonly displacement: PlayerPosition;
 }
@@ -47,6 +51,8 @@ export interface PlayerDebugSnapshot {
   readonly horizontalSpeed: number;
   readonly grounded: boolean;
   readonly dashCooldownRemaining: number;
+  readonly verticalVelocity: number;
+  readonly slopeDegrees: number;
   readonly position: PlayerPosition;
 }
 
@@ -59,6 +65,7 @@ export interface PlayerEvents {
 }
 
 const zeroPosition: PlayerPosition = { x: 0, y: 0, z: 0 };
+const noCollisionContacts: CollisionContacts = Object.freeze({ upwardBlocked: false });
 
 export class PlayerController {
   private readonly config: MovementConfig;
@@ -74,6 +81,7 @@ export class PlayerController {
   private hasDashedSinceAirborne = false;
   private wasDashReady = true;
   private grounded = true;
+  private slopeDegrees = 0;
 
   constructor(options?: {
     readonly config?: MovementConfig;
@@ -97,6 +105,7 @@ export class PlayerController {
   ): PlayerStep {
     const walkableGround = this.hasWalkableGroundContact(groundReport);
     this.grounded = walkableGround;
+    this.slopeDegrees = groundReport.slopeDegrees;
     this.coyoteTimerSeconds = updateCoyoteTimer(
       this.coyoteTimerSeconds,
       walkableGround,
@@ -151,10 +160,19 @@ export class PlayerController {
     };
   }
 
-  reconcilePosition(position: PlayerPosition, groundReport: GroundReport): void {
+  reconcilePosition(
+    position: PlayerPosition,
+    groundReport: GroundReport,
+    contacts: CollisionContacts = noCollisionContacts,
+  ): void {
     const wasGrounded = this.grounded;
     this.position = position;
     this.grounded = this.hasWalkableGroundContact(groundReport);
+    this.slopeDegrees = groundReport.slopeDegrees;
+
+    if (contacts.upwardBlocked && this.verticalVelocity > 0) {
+      this.verticalVelocity = 0;
+    }
 
     if (this.grounded) {
       this.hasDashedSinceAirborne = false;
@@ -179,6 +197,8 @@ export class PlayerController {
       horizontalSpeed: horizontalLength(this.horizontalVelocity),
       grounded: this.grounded,
       dashCooldownRemaining: this.dashCooldownRemainingSeconds,
+      verticalVelocity: this.verticalVelocity,
+      slopeDegrees: this.slopeDegrees,
       position: this.position,
     };
   }

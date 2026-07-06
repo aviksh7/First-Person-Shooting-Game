@@ -117,4 +117,49 @@ describe("PlayerController", () => {
     const postDashStep = controller.update(0.2, emptyInputFrame, 0, airborneReport);
     expect(postDashStep.displacement.y).toBeLessThan(0);
   });
+
+  it("zeroes positive vertical velocity when upward movement is blocked", () => {
+    const controller = new PlayerController();
+    const jumpStep = controller.update(
+      0.016,
+      { ...emptyInputFrame, jumpPressed: true, jumpHeld: true },
+      0,
+      groundedReport,
+    );
+
+    expect(jumpStep.displacement.y).toBeGreaterThan(0);
+    controller.reconcilePosition({ x: 0, y: 0, z: 0 }, airborneReport, { upwardBlocked: true });
+
+    expect(controller.getDebugSnapshot().verticalVelocity).toBe(0);
+  });
+
+  it("keeps normal jump vertical velocity when upward movement is not blocked", () => {
+    const controller = new PlayerController();
+    const jumpStep = controller.update(
+      0.016,
+      { ...emptyInputFrame, jumpPressed: true, jumpHeld: true },
+      0,
+      groundedReport,
+    );
+
+    controller.reconcilePosition({ x: 0, y: jumpStep.displacement.y, z: 0 }, airborneReport);
+
+    expect(controller.getDebugSnapshot().verticalVelocity).toBeGreaterThan(0);
+  });
+
+  it("does not treat horizontal collision as ceiling contact", () => {
+    const controller = new PlayerController();
+    const jumpStep = controller.update(
+      0.016,
+      { ...emptyInputFrame, moveY: 1, jumpPressed: true, jumpHeld: true },
+      0,
+      groundedReport,
+    );
+
+    controller.reconcilePosition({ x: 0, y: jumpStep.displacement.y, z: 0.01 }, airborneReport, {
+      upwardBlocked: false,
+    });
+
+    expect(controller.getDebugSnapshot().verticalVelocity).toBeGreaterThan(0);
+  });
 });

@@ -4,12 +4,13 @@ import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import type { GroundReport, PlayerPosition } from "../game/player/PlayerController";
+import type { CollisionContacts, GroundReport, PlayerPosition } from "../game/player/PlayerController";
 import type { MovementConfig } from "../game/player/movementConfig";
 
 interface CollisionMoveResult {
   readonly position: PlayerPosition;
   readonly groundReport: GroundReport;
+  readonly contacts: CollisionContacts;
 }
 
 const groundNormal: PlayerPosition = { x: 0, y: 1, z: 0 };
@@ -43,6 +44,7 @@ export class PlayerCollisionBody {
   }
 
   move(displacement: PlayerPosition): CollisionMoveResult {
+    const previousPosition = this.getFeetPosition();
     this.scratchDisplacement.set(displacement.x, displacement.y, displacement.z);
     this.body.moveWithCollisions(this.scratchDisplacement);
 
@@ -50,9 +52,19 @@ export class PlayerCollisionBody {
       this.snapToGroundIfClose();
     }
 
+    const position = this.getFeetPosition();
+    const actualDisplacement: PlayerPosition = {
+      x: position.x - previousPosition.x,
+      y: position.y - previousPosition.y,
+      z: position.z - previousPosition.z,
+    };
+
     return {
-      position: this.getFeetPosition(),
+      position,
       groundReport: this.getGroundReport(),
+      contacts: {
+        upwardBlocked: displacement.y > 0 && actualDisplacement.y <= 0.0001,
+      },
     };
   }
 
