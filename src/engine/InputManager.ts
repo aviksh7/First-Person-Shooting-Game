@@ -39,11 +39,10 @@ const emptyInputFrame: InputFrame = Object.freeze({
   dashHeld: false,
 });
 
-const heldActions = new Set<InputAction>();
-const pressedActions = new Set<InputAction>();
-const releasedActions = new Set<InputAction>();
-
 export class InputManager {
+  private readonly heldActions = new Set<InputAction>();
+  private readonly pressedActions = new Set<InputAction>();
+  private readonly releasedActions = new Set<InputAction>();
   private mouseDeltaX = 0;
   private mouseDeltaY = 0;
 
@@ -68,11 +67,11 @@ export class InputManager {
       event.preventDefault();
     }
 
-    if (!heldActions.has(action) && !event.repeat) {
-      pressedActions.add(action);
+    if (!this.heldActions.has(action) && !event.repeat) {
+      this.pressedActions.add(action);
     }
 
-    heldActions.add(action);
+    this.heldActions.add(action);
   };
 
   private readonly handleKeyUp = (event: KeyboardEvent): void => {
@@ -81,8 +80,8 @@ export class InputManager {
       return;
     }
 
-    heldActions.delete(action);
-    releasedActions.add(action);
+    this.heldActions.delete(action);
+    this.releasedActions.add(action);
   };
 
   private readonly handleMouseMove = (event: MouseEvent): void => {
@@ -116,23 +115,23 @@ export class InputManager {
   }
 
   consumeInputFrame(): InputFrame {
-    if (heldActions.size === 0 && pressedActions.size === 0) {
-      releasedActions.clear();
+    if (this.heldActions.size === 0 && this.pressedActions.size === 0) {
+      this.releasedActions.clear();
       return emptyInputFrame;
     }
 
     const frame: InputFrame = Object.freeze({
       moveX: this.axis("moveRight", "moveLeft"),
       moveY: this.axis("moveForward", "moveBackward"),
-      sprintHeld: heldActions.has("sprint"),
-      jumpPressed: pressedActions.has("jump"),
-      jumpHeld: heldActions.has("jump"),
-      dashPressed: pressedActions.has("dash"),
-      dashHeld: heldActions.has("dash"),
+      sprintHeld: this.heldActions.has("sprint"),
+      jumpPressed: this.pressedActions.has("jump"),
+      jumpHeld: this.heldActions.has("jump"),
+      dashPressed: this.pressedActions.has("dash"),
+      dashHeld: this.heldActions.has("dash"),
     });
 
-    pressedActions.clear();
-    releasedActions.clear();
+    this.pressedActions.clear();
+    this.releasedActions.clear();
     return frame;
   }
 
@@ -147,14 +146,15 @@ export class InputManager {
   }
 
   reset(): void {
-    heldActions.clear();
-    pressedActions.clear();
-    releasedActions.clear();
+    this.heldActions.clear();
+    this.pressedActions.clear();
+    this.releasedActions.clear();
     this.mouseDeltaX = 0;
     this.mouseDeltaY = 0;
   }
 
   dispose(): void {
+    this.reset();
     window.removeEventListener("keydown", this.handleKeyDown);
     window.removeEventListener("keyup", this.handleKeyUp);
     window.removeEventListener("blur", this.handleBlur);
@@ -163,6 +163,6 @@ export class InputManager {
   }
 
   private axis(positive: InputAction, negative: InputAction): number {
-    return Number(heldActions.has(positive)) - Number(heldActions.has(negative));
+    return Number(this.heldActions.has(positive)) - Number(this.heldActions.has(negative));
   }
 }

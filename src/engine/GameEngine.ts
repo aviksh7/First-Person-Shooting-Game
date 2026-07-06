@@ -1,4 +1,3 @@
-import "@babylonjs/core/Collisions/collisionCoordinator";
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { AssetManifestLoader } from "./AssetManifestLoader";
@@ -16,7 +15,7 @@ import {
   type PlayerEvents,
   type PlayerPosition,
 } from "../game/player/PlayerController";
-import { defaultMovementConfig } from "../game/player/movementConfig";
+import { defaultMovementConfig, type MovementConfig } from "../game/player/movementConfig";
 
 export interface PlayerRuntimeDebugSnapshot extends PlayerDebugSnapshot {
   readonly phase: string;
@@ -42,6 +41,7 @@ interface GameEngineOptions {
   readonly onPerfToggleRequested: () => void;
   readonly onPerfStats: (stats: PerfStats) => void;
   readonly onPlayerDebug: (snapshot: PlayerDebugSnapshot) => void;
+  readonly movementConfig?: MovementConfig;
 }
 
 export class GameEngine {
@@ -54,6 +54,7 @@ export class GameEngine {
   private readonly performanceStats: PerformanceStats;
   private readonly assetManifestLoader = new AssetManifestLoader();
   private readonly playerEvents = new EventBus<PlayerEvents>();
+  private readonly movementConfig: MovementConfig;
   private readonly playerController: PlayerController;
   private readonly playerCollisionBody: PlayerCollisionBody;
   private readonly cameraPosition = new Vector3(0, 0, 0);
@@ -81,17 +82,18 @@ export class GameEngine {
       stencil: true,
     });
     const greybox = createGreyboxScene(this.engine);
+    this.movementConfig = options.movementConfig ?? defaultMovementConfig;
     this.scene = greybox.scene;
     this.camera = greybox.camera;
-    this.camera.fov = (defaultMovementConfig.baseFovDegrees * Math.PI) / 180;
+    this.camera.fov = (this.movementConfig.baseFovDegrees * Math.PI) / 180;
     this.playerController = new PlayerController({
-      config: defaultMovementConfig,
+      config: this.movementConfig,
       events: this.playerEvents,
       initialPosition: this.initialFeetPosition,
     });
     this.playerCollisionBody = new PlayerCollisionBody(
       this.scene,
-      defaultMovementConfig,
+      this.movementConfig,
       this.initialFeetPosition,
     );
     this.performanceStats = new PerformanceStats(this.engine, this.scene);
@@ -184,15 +186,15 @@ export class GameEngine {
     }
 
     const delta = this.inputManager.consumeMouseDelta();
-    this.yawRadians += delta.x * defaultMovementConfig.mouseSensitivity;
+    this.yawRadians += delta.x * this.movementConfig.mouseSensitivity;
     this.pitchRadians = Math.max(
       (-89 * Math.PI) / 180,
-      Math.min((89 * Math.PI) / 180, this.pitchRadians + delta.y * defaultMovementConfig.mouseSensitivity),
+      Math.min((89 * Math.PI) / 180, this.pitchRadians + delta.y * this.movementConfig.mouseSensitivity),
     );
   }
 
   private syncCameraToPlayer(feetPosition: PlayerPosition): void {
-    this.cameraPosition.set(feetPosition.x, feetPosition.y + defaultMovementConfig.eyeHeight, feetPosition.z);
+    this.cameraPosition.set(feetPosition.x, feetPosition.y + this.movementConfig.eyeHeight, feetPosition.z);
     this.camera.position.copyFrom(this.cameraPosition);
     this.camera.rotation.set(this.pitchRadians, this.yawRadians, 0);
   }
@@ -210,7 +212,7 @@ export class GameEngine {
   }
 
   private shouldSimulate(): boolean {
-    return this.simulationActive || window.__NULLPOINT_PHASE__ === "Playing";
+    return this.simulationActive;
   }
 }
 

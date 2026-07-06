@@ -198,6 +198,13 @@ export class PlayerController {
           dtSeconds,
         );
       } else {
+        if (horizontalLength(this.horizontalVelocity) > targetSpeed) {
+          this.horizontalVelocity = applyGroundFriction(
+            this.horizontalVelocity,
+            this.config.groundFriction,
+            dtSeconds,
+          );
+        }
         this.horizontalVelocity = accelerateHorizontal(
           this.horizontalVelocity,
           wishDirection,
@@ -235,6 +242,7 @@ export class PlayerController {
       x: dashDirection.x * this.config.dashSpeed,
       z: dashDirection.z * this.config.dashSpeed,
     };
+    // Dash is gravity-neutral only for its active duration; normal gravity resumes after it expires.
     this.verticalVelocity = 0;
     this.dashDurationRemainingSeconds = this.config.dashDuration;
     this.dashCooldownRemainingSeconds = this.config.dashCooldown;

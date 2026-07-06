@@ -6,6 +6,7 @@ import {
   type InputFrame,
   type PlayerEvents,
 } from "../../game/player/PlayerController";
+import { defaultMovementConfig } from "../../game/player/movementConfig";
 
 const emptyInputFrame: InputFrame = Object.freeze({
   moveX: 0,
@@ -77,5 +78,43 @@ describe("PlayerController", () => {
     controller.update(1.4, emptyInputFrame, 0, groundedReport);
     expect(controller.getDebugSnapshot().dashCooldownRemaining).toBe(0);
     expect(dashReady).toBe(1);
+  });
+
+  it("decays grounded dash overspeed even while movement input is held", () => {
+    const controller = new PlayerController();
+
+    controller.update(
+      0.016,
+      { ...emptyInputFrame, moveY: 1, dashPressed: true, dashHeld: true },
+      0,
+      groundedReport,
+    );
+    const dashSpeed = controller.getDebugSnapshot().horizontalSpeed;
+
+    controller.update(0.2, { ...emptyInputFrame, moveY: 1 }, 0, groundedReport);
+    const speedAfterDash = controller.getDebugSnapshot().horizontalSpeed;
+
+    controller.update(0.1, { ...emptyInputFrame, moveY: 1 }, 0, groundedReport);
+    const decayedSpeed = controller.getDebugSnapshot().horizontalSpeed;
+
+    expect(dashSpeed).toBeCloseTo(defaultMovementConfig.dashSpeed, 5);
+    expect(speedAfterDash).toBeLessThan(dashSpeed);
+    expect(decayedSpeed).toBeLessThan(speedAfterDash);
+    expect(decayedSpeed).toBeGreaterThanOrEqual(defaultMovementConfig.walkSpeed);
+  });
+
+  it("suppresses gravity only during active dash duration", () => {
+    const controller = new PlayerController();
+
+    const dashStep = controller.update(
+      0.016,
+      { ...emptyInputFrame, moveY: 1, dashPressed: true, dashHeld: true },
+      0,
+      airborneReport,
+    );
+    expect(dashStep.displacement.y).toBe(0);
+
+    const postDashStep = controller.update(0.2, emptyInputFrame, 0, airborneReport);
+    expect(postDashStep.displacement.y).toBeLessThan(0);
   });
 });

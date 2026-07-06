@@ -62,8 +62,12 @@ export function applyGroundFriction(
   dtSeconds: number,
 ): HorizontalVelocity {
   const speed = horizontalLength(velocity);
-  if (speed <= Number.EPSILON || friction <= 0) {
+  if (speed <= Number.EPSILON) {
     return { x: 0, z: 0 };
+  }
+
+  if (friction <= 0) {
+    return velocity;
   }
 
   const newSpeed = Math.max(0, speed - friction * dtSeconds);

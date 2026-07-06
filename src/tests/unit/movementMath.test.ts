@@ -40,6 +40,10 @@ describe("movementMath", () => {
     });
   });
 
+  it("leaves velocity unchanged when ground friction is disabled", () => {
+    expect(applyGroundFriction({ x: 3, z: 4 }, 0, 0.1)).toEqual({ x: 3, z: 4 });
+  });
+
   it("accelerates toward target speed without badly overshooting", () => {
     const velocity = accelerateHorizontal(
       { x: 0, z: 0 },

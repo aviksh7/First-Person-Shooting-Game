@@ -1,4 +1,6 @@
+import "@babylonjs/core/Collisions/collisionCoordinator";
 import type { Scene } from "@babylonjs/core/scene";
+import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
@@ -11,18 +13,20 @@ interface CollisionMoveResult {
 }
 
 const groundNormal: PlayerPosition = { x: 0, y: 1, z: 0 };
+const probeStartOffset = 0.05;
 
 export class PlayerCollisionBody {
   private readonly body: AbstractMesh;
   private readonly scratchDisplacement = new Vector3(0, 0, 0);
-  private readonly roomLimit: number;
+  private readonly groundProbeOrigin = new Vector3(0, 0, 0);
+  private readonly groundProbeDirection = new Vector3(0, -1, 0);
+  private readonly groundProbeRay = new Ray(this.groundProbeOrigin, this.groundProbeDirection);
 
   constructor(
-    scene: Scene,
+    private readonly scene: Scene,
     private readonly config: MovementConfig,
     initialFeetPosition: PlayerPosition,
   ) {
-    this.roomLimit = 9 - config.playerRadius - 0.24;
     this.body = MeshBuilder.CreateBox(
       "player-collision-body",
       {
@@ -41,11 +45,9 @@ export class PlayerCollisionBody {
   move(displacement: PlayerPosition): CollisionMoveResult {
     this.scratchDisplacement.set(displacement.x, displacement.y, displacement.z);
     this.body.moveWithCollisions(this.scratchDisplacement);
-    this.clampToGreyboxRoom();
 
-    const feetPosition = this.getFeetPosition();
-    if (feetPosition.y < 0) {
-      this.setFeetPosition({ x: feetPosition.x, y: 0, z: feetPosition.z });
+    if (displacement.y < 0) {
+      this.snapToGroundIfClose();
     }
 
     return {
@@ -67,11 +69,19 @@ export class PlayerCollisionBody {
   }
 
   getGroundReport(): GroundReport {
-    const feetY = this.body.position.y - this.config.playerHeight / 2;
+    const groundHit = this.probeGround(this.config.groundSnapDistance);
+    if (!groundHit) {
+      return {
+        grounded: false,
+        slopeDegrees: 0,
+        groundNormal,
+      };
+    }
+
     return {
-      grounded: feetY <= this.config.groundSnapDistance,
-      slopeDegrees: 0,
-      groundNormal,
+      grounded: true,
+      slopeDegrees: groundHit.slopeDegrees,
+      groundNormal: groundHit.groundNormal,
     };
   }
 
@@ -79,8 +89,62 @@ export class PlayerCollisionBody {
     this.body.dispose();
   }
 
-  private clampToGreyboxRoom(): void {
-    this.body.position.x = Math.max(-this.roomLimit, Math.min(this.roomLimit, this.body.position.x));
-    this.body.position.z = Math.max(-this.roomLimit, Math.min(this.roomLimit, this.body.position.z));
+  private snapToGroundIfClose(): void {
+    const groundHit = this.probeGround(this.config.groundSnapDistance);
+    if (!groundHit) {
+      return;
+    }
+
+    const feetPosition = this.getFeetPosition();
+    this.setFeetPosition({
+      x: feetPosition.x,
+      y: groundHit.point.y,
+      z: feetPosition.z,
+    });
+  }
+
+  private probeGround(maxDistanceFromFeet: number):
+    | {
+        readonly point: Vector3;
+        readonly distanceFromFeet: number;
+        readonly slopeDegrees: number;
+        readonly groundNormal: PlayerPosition;
+      }
+    | undefined {
+    const feetPosition = this.getFeetPosition();
+    this.groundProbeOrigin.set(feetPosition.x, feetPosition.y + probeStartOffset, feetPosition.z);
+    this.groundProbeRay.length = maxDistanceFromFeet + probeStartOffset;
+
+    const pick = this.scene.pickWithRay(
+      this.groundProbeRay,
+      (mesh) => mesh !== this.body && mesh.checkCollisions && mesh.isEnabled() && mesh.isVisible,
+      false,
+    );
+
+    if (!pick?.hit || !pick.pickedPoint) {
+      return undefined;
+    }
+
+    const normal = pick.getNormal(true, true) ?? Vector3.Up();
+    normal.normalize();
+    if (normal.y < 0) {
+      normal.scaleInPlace(-1);
+    }
+
+    const distanceFromFeet = feetPosition.y - pick.pickedPoint.y;
+    if (distanceFromFeet < -probeStartOffset || distanceFromFeet > maxDistanceFromFeet) {
+      return undefined;
+    }
+
+    return {
+      point: pick.pickedPoint,
+      distanceFromFeet,
+      slopeDegrees: (Math.acos(Math.max(-1, Math.min(1, normal.y))) * 180) / Math.PI,
+      groundNormal: {
+        x: normal.x,
+        y: normal.y,
+        z: normal.z,
+      },
+    };
   }
 }
