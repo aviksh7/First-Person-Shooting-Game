@@ -1,18 +1,20 @@
 {
-  "name": "browser-first-3d-fps",
+  "name": "nullpoint",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run typecheck && vite build",
     "preview": "vite preview",
+    "typecheck": "tsc -b",
+    "lint": "eslint src vite.config.ts vitest.config.ts playwright.config.ts",
+    "test": "vitest run",
+    "format": "prettier . --write",
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@babylonjs/core": "^7.33.2",
-    "@babylonjs/inspector": "^7.33.2",
-    "howler": "^2.2.4",
+    "@babylonjs/core": "^8.0.0",
     "localforage": "^1.10.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -20,12 +22,17 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.18.0",
     "@playwright/test": "^1.54.2",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.18.0",
     "playwright": "^1.54.2",
+    "prettier": "^3.4.2",
     "typescript": "^5.7.2",
+    "typescript-eslint": "^8.20.0",
+    "vitest": "^2.1.8",
     "vite": "^5.4.11"
   }
 }
