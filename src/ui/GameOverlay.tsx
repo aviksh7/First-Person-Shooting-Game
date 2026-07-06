@@ -56,6 +56,8 @@ export function GameOverlay({ commands }: GameOverlayProps): JSX.Element {
               <span>Speed {playerDebug.horizontalSpeed.toFixed(2)} m/s</span>
               <span>Grounded {playerDebug.grounded ? "yes" : "no"}</span>
               <span>Dash {playerDebug.dashCooldownRemaining.toFixed(2)} s</span>
+              <span>Vertical {playerDebug.verticalVelocity.toFixed(2)} m/s</span>
+              <span>Slope {playerDebug.slopeDegrees.toFixed(0)} deg</span>
               <span>
                 Pos {playerDebug.position.x.toFixed(1)}, {playerDebug.position.y.toFixed(1)},{" "}
                 {playerDebug.position.z.toFixed(1)}

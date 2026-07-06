@@ -6,7 +6,8 @@ import { InputManager } from "./InputManager";
 import { PerformanceStats, type PerfStats } from "./PerformanceStats";
 import { PlayerCollisionBody } from "./PlayerCollisionBody";
 import { PointerLockController } from "./PointerLockController";
-import { createGreyboxScene } from "./createGreyboxScene";
+import { createMovementGymScene } from "./createMovementGymScene";
+import { resolveMovementGymSpawnFromSearch } from "./movementGymSpawns";
 import { EventBus } from "../game/EventBus";
 import {
   PlayerController,
@@ -58,7 +59,7 @@ export class GameEngine {
   private readonly playerController: PlayerController;
   private readonly playerCollisionBody: PlayerCollisionBody;
   private readonly cameraPosition = new Vector3(0, 0, 0);
-  private readonly initialFeetPosition: PlayerPosition = { x: 0, y: 0, z: -6 };
+  private readonly initialFeetPosition: PlayerPosition;
   private isRunning = false;
   private isDisposed = false;
   private simulationActive = false;
@@ -81,10 +82,13 @@ export class GameEngine {
       preserveDrawingBuffer: true,
       stencil: true,
     });
-    const greybox = createGreyboxScene(this.engine);
+    const spawn = resolveMovementGymSpawnFromSearch(window.location.search, import.meta.env.DEV);
+    const gym = createMovementGymScene(this.engine);
     this.movementConfig = options.movementConfig ?? defaultMovementConfig;
-    this.scene = greybox.scene;
-    this.camera = greybox.camera;
+    this.scene = gym.scene;
+    this.camera = gym.camera;
+    this.initialFeetPosition = spawn.position;
+    this.yawRadians = spawn.yawRadians;
     this.camera.fov = (this.movementConfig.baseFovDegrees * Math.PI) / 180;
     this.playerController = new PlayerController({
       config: this.movementConfig,
@@ -175,7 +179,11 @@ export class GameEngine {
     const step = this.playerController.update(dtSeconds, inputFrame, this.yawRadians, groundReport);
     this.lastDisplacement = step.displacement;
     const collisionResult = this.playerCollisionBody.move(step.displacement);
-    this.playerController.reconcilePosition(collisionResult.position, collisionResult.groundReport);
+    this.playerController.reconcilePosition(
+      collisionResult.position,
+      collisionResult.groundReport,
+      collisionResult.contacts,
+    );
     this.publishPlayerDebug();
   };
 
